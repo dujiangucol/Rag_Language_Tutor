@@ -1,0 +1,7 @@
+langchain
+faiss-cpu
+openai
+neo4j
+python-dotenv
+streamlit
+pandas
