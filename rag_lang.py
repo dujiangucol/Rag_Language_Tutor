@@ -17,37 +17,60 @@ if not api_key:
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def generate_response(relevant_chunks, query, use_rag=True):
+def generate_response(relevant_chunks, query, use_rag):
+    system_prompt = """
+    You are a knowledgeable and patient English language tutor specializing in grammar and language usage. 
+    Your goal is to help learners understand complex concepts easily. When providing explanations, you should:
 
+    - Begin with a concise summary of the answer.
+    - Offer a detailed explanation using clear and simple language.
+    - Provide examples to illustrate the concepts.
+    - Encourage the learner and invite follow-up questions.
 
-    if use_rag:
+    Be polite and patient
+    """
+
+    # Construct the user prompt based on whether RAG is used
+    if use_rag and relevant_chunks:
         context = "\n\n".join([chunk.page_content for chunk in relevant_chunks])
-        system_message = "You are a helpful assistant with expertise in grammar and English language."
-        user_message = f"""
-        Context: {context}
-        
-        Question: {query}
+        user_prompt = f"""
+        Based on the following context, please answer the question.
+
+        ### Context:
+        {context}
+
+        ### Question:
+        {query}
         """
     else:
-        system_message = "You are a helpful assistant with expertise in grammar and English language."
-        user_message = f"Question: {query}"
+        user_prompt = f"""
+        Please answer the following question in detail.
 
-    client = OpenAI(
-        api_key=api_key
-    )
+        ### Question:
+        {query}
+        """
 
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": user_message},
-        ],
-        model="gpt-4o-mini-2024-07-18",  # Specify the model
-        max_tokens=300,
-        temperature=0.7,
-    )
+    # Initialize the OpenAI client
+    client = OpenAI(api_key=api_key)
 
-    return chat_completion.choices[0].message.content
+    # Generate the chat completion with adjusted parameters
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt.strip()},
+                {"role": "user", "content": user_prompt.strip()},
+            ],
+            model="gpt-4o-mini-2024-07-18",  # Use the GPT-4 model for better responses
+            max_tokens=350,  # Increase to allow more detailed answers
+            temperature=0.5,  # Lower temperature for more focused responses
+            n=1,  # Generate one response
+            stop=None,  # Let the model decide when to stop
+        )
+        response = chat_completion.choices[0].message.content.strip()
+    except Exception as e:
+        response = f"An error occurred while generating the response: {e}"
 
+    return response
 
 def query_faiss(faiss_index_path, query):
     model_name = "sentence-transformers/all-MiniLM-L6-v2"
@@ -70,7 +93,7 @@ if __name__ == "__main__":
     user_query = "What is the difference between present continuous and simple present?"
 
 
-    use_rag = False
+    use_rag = True
     if use_rag:
         relevant_chunks = query_faiss(faiss_index_path, user_query)
     else:
