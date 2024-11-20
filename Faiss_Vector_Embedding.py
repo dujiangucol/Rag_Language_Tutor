@@ -1,7 +1,6 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
-
 from langchain_community.vectorstores import FAISS
 
 def load_split_data (path):
@@ -50,6 +49,8 @@ def embedding_faiss(texts):
     print(f"FAISS index saved!")
 
 
+
 if __name__ == "__main__":
     text = load_split_data("English_grammar.pdf")
     embedding_faiss(text)
+
